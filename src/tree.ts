@@ -5,8 +5,8 @@ export function buildCommands(tokens: Token[]) {
 		if (!matchType(tokens[i], 'command')) continue
 
 		if (
-			(!matchType(tokens[i + 1], 'string') && ['sprite', 'costume'].includes(tokens[i].content)) ||
-			(!matchType(tokens[i + 1], 'name') && ['import'].includes(tokens[i].content))
+			!matchType(tokens[i + 1], 'string') &&
+			['sprite', 'costume', 'import'].includes(tokens[i].content)
 		)
 			continue
 

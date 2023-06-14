@@ -26,6 +26,7 @@ import * as path from 'path'
 import { tokenize } from './tokenizer'
 import { buildTree } from './tree'
 import { compute, ComputeResult } from './compute'
+import Native from './native'
 import * as crypto from 'crypto'
 const AdmZip = require('adm-zip')
 import { loadImage } from 'canvas'
@@ -539,29 +540,68 @@ export type CompileContext = {
 	}
 }
 
-function addPackageNames(
-	computeResult: ComputeResult,
+// function addPackageNames(
+// 	computeResult: ComputeResult,
+// 	context: CompileContext,
+// 	json: any,
+// 	target: number
+// ): any {
+// 	for (const packageName of Object.keys(computeResult.packages)) {
+// 		for (const name of Object.keys(computeResult.packages[packageName])) {
+// 			context.reference.names[packageName + '.' + name] = {
+// 				type: computeResult.packages[packageName][name].type,
+// 				path: context.path + '/' + packageName + '/' + name,
+// 			}
+
+// 			if (computeResult.packages[packageName][name].additionalNameData !== undefined) {
+// 				context.reference.names[packageName + '.' + name] = {
+// 					...context.reference.names[packageName + '.' + name],
+// 					...computeResult.packages[packageName][name].additionalNameData!(context),
+// 				}
+// 			}
+
+// 			if (computeResult.packages[packageName][name].add !== undefined)
+// 				computeResult.packages[packageName][name].add!(context, json, target)
+// 		}
+// 	}
+
+// 	return json
+// }
+
+function addDependencies(
+	root: ComputeResult,
 	context: CompileContext,
 	json: any,
 	target: number
 ): any {
-	for (const packageName of Object.keys(computeResult.packages)) {
-		for (const name of Object.keys(computeResult.packages[packageName])) {
-			context.reference.names[packageName + '.' + name] = {
-				type: computeResult.packages[packageName][name].type,
-				path: context.path + '/' + packageName + '/' + name,
-			}
+	for (const dependency of root.dependencies) {
+		const fileText = fs.readFileSync(dependency).toString()
+		const dependencyCompute = compute(
+			buildTree(tokenize(fileText)),
+			false,
+			[],
+			path.dirname(dependency)
+		)
 
-			if (computeResult.packages[packageName][name].additionalNameData !== undefined) {
-				context.reference.names[packageName + '.' + name] = {
-					...context.reference.names[packageName + '.' + name],
-					...computeResult.packages[packageName][name].additionalNameData!(context),
-				}
-			}
+		return compileScope(context, dependencyCompute.tree, json, target, true)
+	}
+}
 
-			if (computeResult.packages[packageName][name].add !== undefined)
-				computeResult.packages[packageName][name].add!(context, json, target)
+function addNativeNames(context: CompileContext, json: any, target: number): any {
+	for (const name of Object.keys(Native)) {
+		context.reference.names[name] = {
+			type: (<any>Native)[name].type,
+			path: context.path + '/' + name,
 		}
+
+		if ((<any>Native)[name].additionalNameData !== undefined) {
+			context.reference.names[name] = {
+				...context.reference.names[name],
+				...(<any>Native)[name].additionalNameData(context),
+			}
+		}
+
+		if ((<any>Native)[name].add !== undefined) (<any>Native)[name].add(context, json, target)
 	}
 
 	return json
@@ -647,9 +687,10 @@ export async function compile(projectPath: string) {
 	}
 
 	const projectFile = fs.readFileSync(path.join(projectPath, 'project.mao')).toString()
-	const project = compute(buildTree(tokenize(projectFile)), true)
+	const project = compute(buildTree(tokenize(projectFile)), true, [], projectPath)
 
-	addPackageNames(project, projectContext, projectJSON, 0)
+	// addPackageNames(project, projectContext, projectJSON, 0)
+	addNativeNames(projectContext, projectJSON, 0)
 	addSharedNames(project, projectContext, projectJSON, 0)
 
 	projectJSON = compileScope(projectContext, project.tree, projectJSON, 0, true)
@@ -676,7 +717,13 @@ export async function compile(projectPath: string) {
 	let spriteIndex = 1
 	for (const spritePath of project.sprites) {
 		const spriteFile = fs.readFileSync(path.join(projectPath, spritePath + '.mao')).toString()
-		const sprite = compute(buildTree(tokenize(spriteFile)), false, project.shared)
+		const sprite = compute(
+			buildTree(tokenize(spriteFile)),
+			false,
+			[],
+			path.join(projectPath, path.dirname(spritePath)),
+			project.shared
+		)
 
 		projectJSON.targets.push({
 			isStage: false,
@@ -735,8 +782,11 @@ export async function compile(projectPath: string) {
 			},
 		}
 
-		addPackageNames(sprite, context, projectJSON, spriteIndex)
+		// addPackageNames(sprite, context, projectJSON, spriteIndex)
+		addNativeNames(context, projectJSON, spriteIndex)
 		addSharedNames(project, context, projectJSON, spriteIndex)
+
+		addDependencies(sprite, context, projectJSON, spriteIndex)
 
 		projectJSON = compileScope(context, sprite.tree, projectJSON, spriteIndex, true)
 
