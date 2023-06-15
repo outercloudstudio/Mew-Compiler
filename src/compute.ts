@@ -726,30 +726,6 @@ function addDependencies(tree: Token[], context: ComputeContext) {
 	}
 }
 
-// function computePackages(tree: Token[], context: ComputeContext) {
-// for (let i = 0; i < tree.length; i++) {
-// 	if (matchType(tree[i], 'import')) {
-// 		const packageName = tree[i].content.content
-
-// 		if (packageName === 'Sprite') {
-// 			context.reference.packages[packageName] = Sprite
-
-// 			for (const name of Object.keys(context.reference.packages[packageName])) {
-// 				context.reference.names[packageName + '.' + name] =
-// 					context.reference.packages[packageName][name].type
-// 			}
-// 		} else if (packageName === 'Scratch') {
-// 			context.reference.packages[packageName] = Scratch
-
-// 			for (const name of Object.keys(context.reference.packages[packageName])) {
-// 				context.reference.names[packageName + '.' + name] =
-// 					context.reference.packages[packageName][name].type
-// 			}
-// 		}
-// 	}
-// }
-// }
-
 export type ComputeResult = {
 	sprites: string[]
 	costumes: string[]
@@ -789,9 +765,8 @@ export function compute(
 		},
 	}
 
-	addDependencies(tree, context)
-
 	addNativeNames(context)
+	addDependencies(tree, context)
 
 	for (let i = 0; i < tree.length; i++) {
 		tree[i] = computeRecursive(tree[i], context)

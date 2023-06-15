@@ -540,34 +540,6 @@ export type CompileContext = {
 	}
 }
 
-// function addPackageNames(
-// 	computeResult: ComputeResult,
-// 	context: CompileContext,
-// 	json: any,
-// 	target: number
-// ): any {
-// 	for (const packageName of Object.keys(computeResult.packages)) {
-// 		for (const name of Object.keys(computeResult.packages[packageName])) {
-// 			context.reference.names[packageName + '.' + name] = {
-// 				type: computeResult.packages[packageName][name].type,
-// 				path: context.path + '/' + packageName + '/' + name,
-// 			}
-
-// 			if (computeResult.packages[packageName][name].additionalNameData !== undefined) {
-// 				context.reference.names[packageName + '.' + name] = {
-// 					...context.reference.names[packageName + '.' + name],
-// 					...computeResult.packages[packageName][name].additionalNameData!(context),
-// 				}
-// 			}
-
-// 			if (computeResult.packages[packageName][name].add !== undefined)
-// 				computeResult.packages[packageName][name].add!(context, json, target)
-// 		}
-// 	}
-
-// 	return json
-// }
-
 function addDependencies(
 	root: ComputeResult,
 	context: CompileContext,
@@ -689,9 +661,9 @@ export async function compile(projectPath: string) {
 	const projectFile = fs.readFileSync(path.join(projectPath, 'project.mao')).toString()
 	const project = compute(buildTree(tokenize(projectFile)), true, [], projectPath)
 
-	// addPackageNames(project, projectContext, projectJSON, 0)
 	addNativeNames(projectContext, projectJSON, 0)
 	addSharedNames(project, projectContext, projectJSON, 0)
+	addDependencies(project, projectContext, projectJSON, 0)
 
 	projectJSON = compileScope(projectContext, project.tree, projectJSON, 0, true)
 
@@ -782,11 +754,16 @@ export async function compile(projectPath: string) {
 			},
 		}
 
-		// addPackageNames(sprite, context, projectJSON, spriteIndex)
+		console.log(context.reference.names)
+
 		addNativeNames(context, projectJSON, spriteIndex)
 		addSharedNames(project, context, projectJSON, spriteIndex)
 
+		console.log(context.reference.names)
+
 		addDependencies(sprite, context, projectJSON, spriteIndex)
+
+		console.log(context.reference.names)
 
 		projectJSON = compileScope(context, sprite.tree, projectJSON, spriteIndex, true)
 
