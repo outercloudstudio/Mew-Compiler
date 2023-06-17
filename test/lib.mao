@@ -1,5 +1,5 @@
 import 'libBase'
 
-function void moveLib() {
+export function void moveLib() {
     move(1, 0)
 }

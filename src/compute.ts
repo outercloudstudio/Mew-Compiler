@@ -439,7 +439,7 @@ function computeRecursive(token: Token, context: ComputeContext): Token {
 
 			context.reference.names[token.content.name.content] = type
 
-			if (context.location === 'global')
+			if (token.content.modifiers.find((modifier: Token) => modifier.content === 'export') !== null)
 				context.reference.exportNames[token.content.name.content] = {
 					type,
 					additionalData: {

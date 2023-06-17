@@ -36,6 +36,8 @@ const types = ['string', 'int', 'float', 'bool', 'void']
 
 const commands = ['sprite', 'costume', 'import']
 
+const modifiers = ['export']
+
 export function simpleTokenize(str: string): Token[] {
 	let tokens: Token[] = []
 
@@ -144,6 +146,8 @@ export function classifyTokens(tokens: Token[]): Token[] {
 			token.type = 'command'
 		} else if (token.content == 'false' || token.content == 'true') {
 			token.type = 'bool'
+		} else if (modifiers.includes(token.content)) {
+			token.type = 'modifier'
 		} else {
 			token.type = 'name'
 		}

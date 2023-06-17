@@ -826,6 +826,7 @@ export function buildDefinitions(tokens: Token[], context: string) {
 					type: tokens[i + 1],
 					name: tokens[i + 2],
 					value: tokens[i + 4],
+					modifiers: [],
 				},
 				lines: {
 					start: tokens[i].lines.start,
@@ -853,6 +854,7 @@ export function buildDefinitions(tokens: Token[], context: string) {
 					type: tokens[i + 1],
 					name: tokens[i + 2],
 					value: runInContexts(buildDefinitions, tokens[i + 3]),
+					modifiers: [],
 				},
 				lines: {
 					start: tokens[i].lines.start,
@@ -863,6 +865,14 @@ export function buildDefinitions(tokens: Token[], context: string) {
 					end: tokens[i + 3].columns.end,
 				},
 			})
+		}
+	}
+
+	for (let i = tokens.length - 1; i >= 0; i--) {
+		if (matchType(tokens[i], 'modifier') && matchType(tokens[i + 1], 'definition')) {
+			tokens[i + 1].content.modifiers.push(tokens[i])
+
+			tokens.splice(i, 1)
 		}
 	}
 
