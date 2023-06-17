@@ -8,28 +8,6 @@ type SyntaxCheckContext = {
 	}
 }
 
-function validateDefinition(token: Token, context: SyntaxCheckContext) {
-	if (matchToken(token.content.word, 'tag', 'shared')) {
-		if (!context.reference.project)
-			compilerError(
-				`Shared variables can only be defined in the project script'`,
-				token.lines.start,
-				token.lines.end,
-				token.columns.start,
-				token.columns.end
-			)
-
-		if (context.location !== 'global')
-			compilerError(
-				`Shared variables can only be defined in the global scope'`,
-				token.lines.start,
-				token.lines.end,
-				token.columns.start,
-				token.columns.end
-			)
-	}
-}
-
 function validateIf(token: Token, context: SyntaxCheckContext) {
 	if (token.content.content.params.length > 1) {
 		const unexpectedToken = token.content.content.params[1][0]
@@ -154,8 +132,6 @@ function validate(token: Token, context: SyntaxCheckContext) {
 			)
 		}
 	}
-
-	if (matchType(token, 'definition')) validateDefinition(token, context)
 
 	if (matchType(token, 'if')) validateIf(token, context)
 

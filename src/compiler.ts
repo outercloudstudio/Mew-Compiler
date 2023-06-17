@@ -208,42 +208,6 @@ function compileDefinition(
 	return json
 }
 
-function compileSharedDefinition(
-	context: CompileContext,
-	token: Token,
-	stack: Stack,
-	json: any,
-	target: number
-) {
-	const path = 'shared/' + token.content.name.content
-
-	// console.log(context.path + '/ (Definition) ' + token.content.name.content)
-
-	json.targets[target].lists[path + ' Stack'] = [path + ' Stack', []]
-
-	const expression = compileExpression(
-		{
-			path,
-			reference: context.reference,
-		},
-		token.content.value,
-		stack
-	)
-
-	stack.add(
-		new AddToListBlock(
-			`${path} Stack`,
-			context.reference.names[token.content.name.content].type.castFrom(
-				expression,
-				token.content.value.computedType,
-				stack
-			)
-		)
-	)
-
-	return json
-}
-
 function compileAssignment(context: CompileContext, token: Token, stack: Stack, json: any) {
 	const path = context.path + '/' + token.content.name.content
 
@@ -479,8 +443,6 @@ export function compileScope(
 		if (matchType(token, 'definition')) {
 			if (matchToken(token.content.word, 'descriptor', 'function')) {
 				json = compileFunctionDefinition(context, token, json, target)
-			} else if (matchToken(token.content.word, 'tag', 'shared')) {
-				json = compileSharedDefinition(context, token, stack, json, target)
 			} else {
 				json = compileDefinition(context, token, stack, json, target)
 			}
@@ -574,12 +536,13 @@ type Dependency = {
 export async function compile(projectPath: string) {
 	const buildPath = path.join(projectPath, 'build')
 	if (fs.existsSync(buildPath)) fs.rmSync(buildPath, { recursive: true })
-
 	fs.mkdirSync(buildPath)
 
 	const outPath = path.join(buildPath, 'out')
-
 	fs.mkdirSync(outPath)
+
+	const computePath = path.join(buildPath, 'compute')
+	fs.mkdirSync(computePath)
 
 	let projectJSON: any = {
 		targets: [
@@ -638,6 +601,7 @@ export async function compile(projectPath: string) {
 
 	const dependencies: {
 		[key: string]: {
+			tree: any
 			dependencies: string[]
 			sprites: string[]
 			costumes: string[]
@@ -658,6 +622,7 @@ export async function compile(projectPath: string) {
 		const dependencyCheckResult = dependencyCheck(tree, fileToCompile)
 
 		dependencies[fileToCompile] = {
+			tree: tree,
 			dependencies: dependencyCheckResult.dependencies,
 			sprites: dependencyCheckResult.sprites,
 			costumes: dependencyCheckResult.costumes,
@@ -689,5 +654,18 @@ export async function compile(projectPath: string) {
 				dependenciesToCheck.push(deepDependency)
 			}
 		}
+	}
+
+	const filesToBeComputed = Object.keys(dependencies)
+
+	while (filesToBeComputed.length > 0) {
+		const fileToCompute = filesToBeComputed.shift()!
+
+		const computeResult = compute(
+			dependencies[fileToCompute].tree,
+			fileToCompute === projectFilePath,
+			fileToCompute,
+			dependencies[fileToCompute].dependencies
+		)
 	}
 }

@@ -23,19 +23,18 @@ export const symbols = [
 	'{',
 	'}',
 	',',
-	'[',
-	']',
+	'"',
 ]
 
-export const tags = ['var', 'const', 'shared']
+export const tags = ['var']
 
 export const descriptors = ['function']
 
-export const verbs = ['if', 'while', 'for', 'return', 'break']
+export const verbs = ['if', 'while', 'return']
 
 const types = ['string', 'int', 'float', 'bool', 'void']
 
-const commands = ['sprite', 'costume', 'import', 'from']
+const commands = ['sprite', 'costume', 'import']
 
 export function simpleTokenize(str: string): Token[] {
 	let tokens: Token[] = []
