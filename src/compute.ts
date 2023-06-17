@@ -3,25 +3,12 @@ import { verbs, tags, descriptors, tokenize } from './tokenizer'
 import { getCompilerType } from './types'
 import { Operator, getOperator } from './operators'
 import { VOID, FUNCTION, BOOL, CompilerType } from './types'
+import { compilerError } from './error'
 import Native from './native'
 import path from 'path'
 import { buildTree } from './tree'
 import * as fs from 'fs'
 const util = require('util') //console.log(util.inspect(tokens, false, null, true))
-
-function compilerError(
-	message: string,
-	startLine: number,
-	endLine: number,
-	startColumn: number,
-	endColumn: number
-) {
-	if (startLine == endLine) {
-		throw new Error(`${message} on line ${startLine}`)
-	}
-
-	throw new Error(`${message} at lines ${startLine}-${endLine}`)
-}
 
 type ComputeContext = {
 	location: string

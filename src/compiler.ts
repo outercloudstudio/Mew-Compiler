@@ -30,6 +30,7 @@ import Native from './native'
 import * as crypto from 'crypto'
 const AdmZip = require('adm-zip')
 import { loadImage } from 'canvas'
+import { syntaxCheck } from './syntaxCheck'
 
 function compileExpression(
 	context: CompileContext,
@@ -659,7 +660,9 @@ export async function compile(projectPath: string) {
 	}
 
 	const projectFile = fs.readFileSync(path.join(projectPath, 'project.mao')).toString()
-	const project = compute(buildTree(tokenize(projectFile)), true, [], projectPath)
+	const projectTree = buildTree(tokenize(projectFile))
+	syntaxCheck(projectTree, true)
+	const project = compute(projectTree, true, [], projectPath)
 
 	addNativeNames(projectContext, projectJSON, 0)
 	addSharedNames(project, projectContext, projectJSON, 0)
@@ -754,16 +757,9 @@ export async function compile(projectPath: string) {
 			},
 		}
 
-		console.log(context.reference.names)
-
 		addNativeNames(context, projectJSON, spriteIndex)
 		addSharedNames(project, context, projectJSON, spriteIndex)
-
-		console.log(context.reference.names)
-
 		addDependencies(sprite, context, projectJSON, spriteIndex)
-
-		console.log(context.reference.names)
 
 		projectJSON = compileScope(context, sprite.tree, projectJSON, spriteIndex, true)
 
