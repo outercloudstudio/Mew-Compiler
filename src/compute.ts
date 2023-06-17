@@ -675,44 +675,6 @@ function addNativeNames(context: ComputeContext) {
 	}
 }
 
-function addDependencies(tree: Token[], context: ComputeContext) {
-	for (let i = 0; i < tree.length; i++) {
-		if (matchType(tree[i], 'import')) {
-			const name = tree[i].content.content
-			const dependencyPath = path.join(context.reference.path, name + '.mao')
-
-			if (context.reference.dependants.includes(dependencyPath))
-				compilerError(
-					`Circular dependency ${dependencyPath} in ${context.reference.path}`,
-					tree[i].lines.start,
-					tree[i].lines.end,
-					tree[i].columns.start,
-					tree[i].columns.end
-				)
-
-			const dependants = JSON.parse(JSON.stringify(context.reference.dependants))
-			dependants.push(context.reference.path)
-
-			const fileText = fs.readFileSync(dependencyPath).toString()
-
-			const dependencyCompute = compute(
-				buildTree(tokenize(fileText)),
-				false,
-				dependants,
-				dependencyPath,
-				{}
-			)
-
-			context.reference.names = {
-				...context.reference.names,
-				...dependencyCompute.exportNames,
-			}
-
-			context.reference.dependencies.push(dependencyPath)
-		}
-	}
-}
-
 export type ComputeResult = {
 	sprites: string[]
 	costumes: string[]
