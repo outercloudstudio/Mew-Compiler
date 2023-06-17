@@ -22,7 +22,6 @@ type ComputeContext = {
 		missingDefiniteReturn: Token | null
 		returningType: CompilerType
 		project: boolean
-		path: string
 	}
 }
 
@@ -612,6 +611,10 @@ function addNativeNames(context: ComputeContext) {
 	}
 }
 
+function addImportNames(context: ComputeContext, dependencies: ComputeResult[]) {
+	console.log(dependencies)
+}
+
 export type ComputeResult = {
 	tree: Token[]
 	exportNames: { [key: string]: CompilerType }
@@ -620,8 +623,7 @@ export type ComputeResult = {
 export function compute(
 	tree: Token[],
 	project: boolean,
-	path: string,
-	dependencies: string[]
+	dependencies: ComputeResult[]
 ): ComputeResult {
 	const context: ComputeContext = {
 		location: 'global',
@@ -633,15 +635,15 @@ export function compute(
 			returningType: new VOID(),
 			missingDefiniteReturn: null,
 			project,
-			path,
 		},
 	}
 
 	addNativeNames(context)
+	addImportNames(context, dependencies)
 
-	for (let i = 0; i < tree.length; i++) {
-		tree[i] = computeRecursive(tree[i], context)
-	}
+	// for (let i = 0; i < tree.length; i++) {
+	// 	tree[i] = computeRecursive(tree[i], context)
+	// }
 
 	return {
 		tree,

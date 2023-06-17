@@ -657,15 +657,41 @@ export async function compile(projectPath: string) {
 	}
 
 	const filesToBeComputed = Object.keys(dependencies)
+	const filesComputed: string[] = []
 
 	while (filesToBeComputed.length > 0) {
-		const fileToCompute = filesToBeComputed.shift()!
+		const fileToCompute = filesToBeComputed.splice(
+			filesToBeComputed.findIndex(file => {
+				for (const dependency of dependencies[file].dependencies) {
+					if (!filesComputed.includes(dependency)) return false
+				}
+
+				return true
+			}),
+			1
+		)[0]!
+
+		console.log(fileToCompute)
+
+		filesComputed.push(fileToCompute)
+
+		const fileDependencies: ComputeResult[] = []
+
+		for (const dependency of dependencies[fileToCompute].dependencies) {
+			const dependencyComputePath = path.join(computePath, path.relative(projectPath, dependency))
+
+			fileDependencies.push(JSON.parse(fs.readFileSync(dependencyComputePath).toString()))
+		}
 
 		const computeResult = compute(
 			dependencies[fileToCompute].tree,
 			fileToCompute === projectFilePath,
-			fileToCompute,
-			dependencies[fileToCompute].dependencies
+			fileDependencies
+		)
+
+		fs.writeFileSync(
+			path.join(computePath, path.relative(projectPath, fileToCompute)),
+			JSON.stringify(computeResult, null, 2)
 		)
 	}
 }
