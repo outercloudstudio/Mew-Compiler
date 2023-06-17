@@ -671,8 +671,6 @@ export async function compile(projectPath: string) {
 			1
 		)[0]!
 
-		console.log(fileToCompute)
-
 		filesComputed.push(fileToCompute)
 
 		const fileDependencies: ComputeResult[] = []

@@ -1,12 +1,9 @@
 import { Token, matchType, matchToken } from './token'
-import { verbs, tags, descriptors, tokenize } from './tokenizer'
 import { getCompilerType } from './types'
 import { Operator, getOperator } from './operators'
 import { VOID, FUNCTION, BOOL, CompilerType } from './types'
 import { compilerError } from './error'
 import Native from './native'
-import path from 'path'
-import * as fs from 'fs'
 
 type ComputeContext = {
 	location: string
@@ -194,57 +191,6 @@ function validateCall(token: Token, context: ComputeContext) {
 }
 
 function validateIf(token: Token, context: ComputeContext) {
-	if (token.content.content.params.length == 0)
-		compilerError(
-			`If statement expects bool`,
-			token.lines.start,
-			token.lines.end,
-			token.columns.start,
-			token.columns.end
-		)
-
-	if (token.content.content.params.length > 1) {
-		const unexpectedToken = token.content.content.params[1][0]
-		if (typeof unexpectedToken.content == 'string') {
-			compilerError(
-				`Unexpected '${unexpectedToken.content}'`,
-				unexpectedToken.lines.start,
-				unexpectedToken.lines.end,
-				unexpectedToken.columns.start,
-				unexpectedToken.columns.end
-			)
-		} else {
-			compilerError(
-				`Unexpected ${unexpectedToken.type}`,
-				unexpectedToken.lines.start,
-				unexpectedToken.lines.end,
-				unexpectedToken.columns.start,
-				unexpectedToken.columns.end
-			)
-		}
-	}
-
-	if (token.content.content.params[0].length > 1) {
-		const unexpectedToken = token.content.content.params[0][1]
-		if (typeof unexpectedToken.content == 'string') {
-			compilerError(
-				`Unexpected '${unexpectedToken.content}'`,
-				unexpectedToken.lines.start,
-				unexpectedToken.lines.end,
-				unexpectedToken.columns.start,
-				unexpectedToken.columns.end
-			)
-		} else {
-			compilerError(
-				`Unexpected ${unexpectedToken.type}`,
-				unexpectedToken.lines.start,
-				unexpectedToken.lines.end,
-				unexpectedToken.columns.start,
-				unexpectedToken.columns.end
-			)
-		}
-	}
-
 	if (token.content.content.params[0][0].computedType.signature() != new BOOL().signature())
 		compilerError(
 			`If statement expected bool but recieved ${token.content.content.params[0][0].computedType.signature()}`,
@@ -256,57 +202,6 @@ function validateIf(token: Token, context: ComputeContext) {
 }
 
 function validateWhile(token: Token, context: ComputeContext) {
-	if (token.content.content.params.length == 0)
-		compilerError(
-			`While statement expects bool`,
-			token.lines.start,
-			token.lines.end,
-			token.columns.start,
-			token.columns.end
-		)
-
-	if (token.content.content.params.length > 1) {
-		const unexpectedToken = token.content.content.params[1][0]
-		if (typeof unexpectedToken.content == 'string') {
-			compilerError(
-				`Unexpected '${unexpectedToken.content}'`,
-				unexpectedToken.lines.start,
-				unexpectedToken.lines.end,
-				unexpectedToken.columns.start,
-				unexpectedToken.columns.end
-			)
-		} else {
-			compilerError(
-				`Unexpected ${unexpectedToken.type}`,
-				unexpectedToken.lines.start,
-				unexpectedToken.lines.end,
-				unexpectedToken.columns.start,
-				unexpectedToken.columns.end
-			)
-		}
-	}
-
-	if (token.content.content.params[0].length > 1) {
-		const unexpectedToken = token.content.content.params[0][1]
-		if (typeof unexpectedToken.content == 'string') {
-			compilerError(
-				`Unexpected '${unexpectedToken.content}'`,
-				unexpectedToken.lines.start,
-				unexpectedToken.lines.end,
-				unexpectedToken.columns.start,
-				unexpectedToken.columns.end
-			)
-		} else {
-			compilerError(
-				`Unexpected ${unexpectedToken.type}`,
-				unexpectedToken.lines.start,
-				unexpectedToken.lines.end,
-				unexpectedToken.columns.start,
-				unexpectedToken.columns.end
-			)
-		}
-	}
-
 	if (token.content.content.params[0][0].computedType.signature() != new BOOL().signature())
 		compilerError(
 			`While statement expected bool but recieved ${token.content.content.params[0][0].computedType.signature()}`,
@@ -318,33 +213,6 @@ function validateWhile(token: Token, context: ComputeContext) {
 }
 
 function validate(token: Token, context: ComputeContext) {
-	if (
-		(context.location == 'global' &&
-			!['call', 'definition', 'assignment', 'if', 'while', 'import'].includes(token.type) &&
-			!(token.type == 'sprite' && context.reference.project) &&
-			!(token.type == 'costume' && !context.reference.project)) ||
-		(context.location == 'function' &&
-			!['call', 'definition', 'assignment', 'return', 'if', 'while'].includes(token.type))
-	) {
-		if (typeof token.content == 'string') {
-			compilerError(
-				`Unexpected '${token.content}'`,
-				token.lines.start,
-				token.lines.end,
-				token.columns.start,
-				token.columns.end
-			)
-		} else {
-			compilerError(
-				`Unexpected ${token.type}`,
-				token.lines.start,
-				token.lines.end,
-				token.columns.start,
-				token.columns.end
-			)
-		}
-	}
-
 	if (matchType(token, 'assignment')) validateAssignment(token, context)
 
 	if (matchType(token, 'definition')) validateDefinition(token, context)
@@ -396,23 +264,6 @@ function earlyValidate(token: Token, context: ComputeContext) {
 					token.columns.start,
 					token.columns.end
 				)
-		}
-	}
-
-	if (matchType(token, 'call')) {
-		for (let paramIndex = 0; paramIndex < token.content.params.length; paramIndex++) {
-			if (token.content.params[paramIndex].length == 0) {
-				const previousToken =
-					token.content.params[paramIndex - 1][token.content.params[paramIndex - 1].length - 1]
-
-				compilerError(
-					`Unexpected '${previousToken.content}'`,
-					previousToken.lines.start,
-					previousToken.lines.end,
-					previousToken.columns.start,
-					previousToken.columns.end
-				)
-			}
 		}
 	}
 }
@@ -612,7 +463,12 @@ function addNativeNames(context: ComputeContext) {
 }
 
 function addImportNames(context: ComputeContext, dependencies: ComputeResult[]) {
-	console.log(dependencies)
+	for (const dependency of dependencies) {
+		context.reference.names = {
+			...context.reference.names,
+			...dependency.exportNames,
+		}
+	}
 }
 
 export type ComputeResult = {
@@ -641,9 +497,9 @@ export function compute(
 	addNativeNames(context)
 	addImportNames(context, dependencies)
 
-	// for (let i = 0; i < tree.length; i++) {
-	// 	tree[i] = computeRecursive(tree[i], context)
-	// }
+	for (let i = 0; i < tree.length; i++) {
+		tree[i] = computeRecursive(tree[i], context)
+	}
 
 	return {
 		tree,

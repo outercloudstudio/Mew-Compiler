@@ -21,7 +21,8 @@
       "columns": {
         "start": 1,
         "end": 12
-      }
+      },
+      "computedType": {}
     },
     {
       "type": "import",
@@ -44,7 +45,39 @@
       "columns": {
         "start": 17,
         "end": 28
-      }
+      },
+      "computedType": {}
+    },
+    {
+      "type": "call",
+      "content": {
+        "name": {
+          "content": "moveLib",
+          "type": "name",
+          "lines": {
+            "start": 9,
+            "end": 9
+          },
+          "columns": {
+            "start": 33,
+            "end": 39
+          },
+          "computedType": {
+            "returnType": {},
+            "paramTypes": []
+          }
+        },
+        "params": []
+      },
+      "lines": {
+        "start": 9,
+        "end": 9
+      },
+      "columns": {
+        "start": 33,
+        "end": 41
+      },
+      "computedType": {}
     }
   ],
   "exportNames": {}

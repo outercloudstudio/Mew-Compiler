@@ -9,8 +9,18 @@ type SyntaxCheckContext = {
 }
 
 function validateIf(token: Token, context: SyntaxCheckContext) {
+	if (token.content.content.params.length == 0)
+		compilerError(
+			`If statement expects bool`,
+			token.lines.start,
+			token.lines.end,
+			token.columns.start,
+			token.columns.end
+		)
+
 	if (token.content.content.params.length > 1) {
 		const unexpectedToken = token.content.content.params[1][0]
+
 		if (typeof unexpectedToken.content == 'string') {
 			compilerError(
 				`Unexpected '${unexpectedToken.content}'`,

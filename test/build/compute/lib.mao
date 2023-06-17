@@ -21,7 +21,8 @@
       "columns": {
         "start": 1,
         "end": 16
-      }
+      },
+      "computedType": {}
     },
     {
       "type": "definition",
@@ -80,6 +81,13 @@
                     "columns": {
                       "start": 52,
                       "end": 55
+                    },
+                    "computedType": {
+                      "returnType": {},
+                      "paramTypes": [
+                        {},
+                        {}
+                      ]
                     }
                   },
                   "params": [
@@ -94,7 +102,8 @@
                         "columns": {
                           "start": 57,
                           "end": 57
-                        }
+                        },
+                        "computedType": {}
                       },
                       {
                         "content": ",",
@@ -120,7 +129,8 @@
                         "columns": {
                           "start": 60,
                           "end": 60
-                        }
+                        },
+                        "computedType": {}
                       }
                     ]
                   ]
@@ -132,7 +142,8 @@
                 "columns": {
                   "start": 52,
                   "end": 61
-                }
+                },
+                "computedType": {}
               }
             ]
           },
@@ -143,7 +154,8 @@
           "columns": {
             "start": 42,
             "end": 64
-          }
+          },
+          "computedType": {}
         }
       },
       "lines": {
@@ -153,8 +165,17 @@
       "columns": {
         "start": 21,
         "end": 64
+      },
+      "computedType": {
+        "returnType": {},
+        "paramTypes": []
       }
     }
   ],
-  "exportNames": {}
+  "exportNames": {
+    "moveLib": {
+      "returnType": {},
+      "paramTypes": []
+    }
+  }
 }
