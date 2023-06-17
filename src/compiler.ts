@@ -505,11 +505,11 @@ export type CompileContext = {
 	}
 }
 
-function addNativeNames(context: CompileContext, json: any, target: number): any {
+function addNativeNames(context: CompileContext): any {
 	for (const name of Object.keys(Native)) {
 		context.reference.names[name] = {
 			type: (<any>Native)[name].type,
-			path: context.path + '/' + name,
+			path: 'Native/' + name,
 		}
 
 		if ((<any>Native)[name].additionalNameData !== undefined) {
@@ -518,8 +518,12 @@ function addNativeNames(context: CompileContext, json: any, target: number): any
 				...(<any>Native)[name].additionalNameData(context),
 			}
 		}
+	}
+}
 
-		if ((<any>Native)[name].add !== undefined) (<any>Native)[name].add(context, json, target)
+function addNativeBlocks(json: any, target: number): any {
+	for (const name of Object.keys(Native)) {
+		if ((<any>Native)[name].add !== undefined) (<any>Native)[name].add(json, target)
 	}
 
 	return json
@@ -763,7 +767,7 @@ export async function compile(projectPath: string) {
 				},
 			}
 
-			addNativeNames(context, projectJSON, spriteIndex)
+			addNativeNames(context)
 
 			for (const dependency of shallowDependencies[scopeFilePath].dependencies) {
 				for (const name of Object.keys(fileComputeResults[dependency].exportNames)) {
@@ -815,6 +819,8 @@ export async function compile(projectPath: string) {
 				...flagStack.convert(),
 			}
 		}
+
+		projectJSON = addNativeBlocks(projectJSON, spriteIndex)
 
 		spriteIndex = oldSpriteIndex
 	}
