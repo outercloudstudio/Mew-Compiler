@@ -751,16 +751,20 @@ export async function compile(projectPath: string) {
 
 		const flagStack = new Stack()
 		flagStack.add(new FlagBlock())
-		flagStack.add(new CallBlock(filePath + '/global'))
+		flagStack.add(new CallBlock(path.relative(projectPath, filePath) + '/global'))
 
 		// addNativeNames(context, projectJSON, spriteIndex)
 
 		if (
-			context.reference.definitionPaths[filePath + '/global/update'] !== undefined &&
-			context.reference.definitionPaths[filePath + '/global/update'].signature() ===
-				new FUNCTION(new VOID(), []).signature()
+			context.reference.definitionPaths[path.relative(projectPath, filePath) + '/global/update'] !==
+				undefined &&
+			context.reference.definitionPaths[
+				path.relative(projectPath, filePath) + '/global/update'
+			].signature() === new FUNCTION(new VOID(), []).signature()
 		) {
-			flagStack.add(new ForeverBlock()).stack.add(new CallBlock(filePath + '/global/update'))
+			flagStack
+				.add(new ForeverBlock())
+				.stack.add(new CallBlock(path.relative(projectPath, filePath) + '/global/update'))
 		}
 
 		projectJSON.targets[spriteIndex].blocks = {
