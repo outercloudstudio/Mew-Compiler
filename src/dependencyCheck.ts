@@ -24,11 +24,11 @@ export function dependencyCheck(tree: Token[], filePath: string): DependencyChec
 		}
 
 		if (matchType(tree[i], 'sprite')) {
-			sprites.push(tree[i].content.content)
+			sprites.push(path.join(directoryPath, tree[i].content.content))
 		}
 
 		if (matchType(tree[i], 'costume')) {
-			costumes.push(tree[i].content.content)
+			costumes.push(path.join(directoryPath, tree[i].content.content))
 		}
 	}
 

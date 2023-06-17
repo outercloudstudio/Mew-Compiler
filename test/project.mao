@@ -1,1 +1,3 @@
 sprite 'cat'
+
+import 'lib'

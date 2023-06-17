@@ -31,6 +31,8 @@ import * as crypto from 'crypto'
 const AdmZip = require('adm-zip')
 import { loadImage } from 'canvas'
 import { syntaxCheck } from './syntaxCheck'
+import { dependencyCheck } from './dependencyCheck'
+import { compilerError } from './error'
 
 function compileExpression(
 	context: CompileContext,
@@ -541,25 +543,6 @@ export type CompileContext = {
 	}
 }
 
-function addDependencies(
-	root: ComputeResult,
-	context: CompileContext,
-	json: any,
-	target: number
-): any {
-	for (const dependency of root.dependencies) {
-		const fileText = fs.readFileSync(dependency).toString()
-		const dependencyCompute = compute(
-			buildTree(tokenize(fileText)),
-			false,
-			[],
-			path.dirname(dependency)
-		)
-
-		return compileScope(context, dependencyCompute.tree, json, target, true)
-	}
-}
-
 function addNativeNames(context: CompileContext, json: any, target: number): any {
 	for (const name of Object.keys(Native)) {
 		context.reference.names[name] = {
@@ -580,20 +563,12 @@ function addNativeNames(context: CompileContext, json: any, target: number): any
 	return json
 }
 
-function addSharedNames(
-	computeResult: ComputeResult,
-	context: CompileContext,
-	json: any,
-	target: number
-): any {
-	for (const sharedName of Object.keys(computeResult.shared)) {
-		context.reference.names[sharedName] = {
-			type: computeResult.shared[sharedName],
-			path: 'shared/' + sharedName,
-		}
-	}
-
-	return json
+type Dependency = {
+	path: string
+	dependants: Dependency[]
+	dependencies: Dependency[]
+	sprites: string[]
+	costumes: string[]
 }
 
 export async function compile(projectPath: string) {
@@ -659,135 +634,60 @@ export async function compile(projectPath: string) {
 		},
 	}
 
-	const projectFile = fs.readFileSync(path.join(projectPath, 'project.mao')).toString()
-	const projectTree = buildTree(tokenize(projectFile))
-	syntaxCheck(projectTree, true)
-	const project = compute(projectTree, true, [], projectPath)
+	const projectFilePath = path.join(projectPath, 'project.mao')
 
-	addNativeNames(projectContext, projectJSON, 0)
-	addSharedNames(project, projectContext, projectJSON, 0)
-	addDependencies(project, projectContext, projectJSON, 0)
+	const dependencies: {
+		[key: string]: {
+			dependencies: string[]
+			sprites: string[]
+			costumes: string[]
+		}
+	} = {}
 
-	projectJSON = compileScope(projectContext, project.tree, projectJSON, 0, true)
+	const filesCompiledStage1 = []
+	const filesToCompileStage1 = [projectFilePath]
 
-	const projectFlagStack = new Stack()
-	projectFlagStack.add(new FlagBlock())
-	projectFlagStack.add(new CallBlock('project/global'))
+	while (filesToCompileStage1.length > 0) {
+		const fileToCompile = filesToCompileStage1.shift()!
+		filesCompiledStage1.push(fileToCompile)
 
-	if (
-		projectContext.reference.definitionPaths['project/global/update'] !== undefined &&
-		projectContext.reference.definitionPaths['project/global/update'].signature() ===
-			new FUNCTION(new VOID(), []).signature()
-	) {
-		projectFlagStack.add(new ForeverBlock()).stack.add(new CallBlock('project/global/update'))
+		const tree = buildTree(tokenize(fs.readFileSync(fileToCompile).toString()))
+
+		syntaxCheck(tree, fileToCompile === projectFilePath)
+
+		const dependencyCheckResult = dependencyCheck(tree, fileToCompile)
+
+		dependencies[fileToCompile] = {
+			dependencies: dependencyCheckResult.dependencies,
+			sprites: dependencyCheckResult.sprites,
+			costumes: dependencyCheckResult.costumes,
+		}
+
+		for (const dependency of dependencyCheckResult.dependencies) {
+			if (filesCompiledStage1.includes(dependency)) continue
+			if (filesToCompileStage1.includes(dependency)) continue
+
+			filesToCompileStage1.push(dependency)
+		}
 	}
 
-	projectJSON.targets[0].blocks = {
-		...projectJSON.targets[0].blocks,
-		...projectFlagStack.convert(),
+	for (const filePath of Object.keys(dependencies)) {
+		const dependenciesChecked = []
+		const dependenciesToCheck = JSON.parse(JSON.stringify(dependencies[filePath].dependencies))
+
+		while (dependenciesToCheck.length > 0) {
+			const dependency = dependenciesToCheck.shift()!
+			dependenciesChecked.push(dependencies)
+
+			for (const deepDependency of dependencies[dependency].dependencies) {
+				if (deepDependency === filePath) compilerError(`Circular dependency!`, 0, 0, 0, 0)
+
+				if (dependencies[filePath].dependencies.includes(deepDependency)) continue
+
+				dependencies[filePath].dependencies.push(deepDependency)
+
+				dependenciesToCheck.push(deepDependency)
+			}
+		}
 	}
-
-	const zip = new AdmZip()
-
-	let spriteIndex = 1
-	for (const spritePath of project.sprites) {
-		const spriteFile = fs.readFileSync(path.join(projectPath, spritePath + '.mao')).toString()
-		const sprite = compute(
-			buildTree(tokenize(spriteFile)),
-			false,
-			[],
-			path.join(projectPath, path.dirname(spritePath)),
-			project.shared
-		)
-
-		projectJSON.targets.push({
-			isStage: false,
-			name: spritePath,
-			variables: {
-				'Transfer Buffer': ['Transfer Buffer', 'void'],
-				Returning: ['Returning', 'false'],
-			},
-			lists: {
-				'Operation Stack': ['Operation Stack', []],
-			},
-			broadcasts: {},
-			blocks: {},
-			comments: {},
-			currentCostume: 0,
-			costumes: [],
-			sounds: [],
-			volume: 100,
-			layerOrder: spriteIndex,
-			visible: true,
-			x: 0,
-			y: 0,
-			size: 100,
-			direction: 90,
-			draggable: false,
-			rotationStyle: 'all around',
-		})
-
-		for (const costume of sprite.costumes) {
-			const costumePath = path.join(projectPath, path.dirname(spritePath), costume)
-			const hash = crypto.createHash('md5').update(fs.readFileSync(costumePath)).digest('hex')
-			const extension = costumePath.substring(costumePath.length - 3, costumePath.length)
-
-			fs.copyFileSync(costumePath, path.join(outPath, hash + extension))
-
-			zip.addLocalFile(path.join(outPath, hash + extension))
-
-			const image = await loadImage(costumePath)
-
-			projectJSON.targets[spriteIndex].costumes.push({
-				name: costumePath,
-				dataFormat: extension,
-				assetId: hash,
-				md5ext: hash + '.' + extension,
-				rotationCenterX: image.width / 2,
-				rotationCenterY: image.height / 2,
-			})
-		}
-
-		const context: CompileContext = {
-			path: spritePath + '/global',
-			reference: {
-				names: {},
-				breakingScope: false,
-				definitionPaths: {},
-			},
-		}
-
-		addNativeNames(context, projectJSON, spriteIndex)
-		addSharedNames(project, context, projectJSON, spriteIndex)
-		addDependencies(sprite, context, projectJSON, spriteIndex)
-
-		projectJSON = compileScope(context, sprite.tree, projectJSON, spriteIndex, true)
-
-		const flagStack = new Stack()
-		flagStack.add(new FlagBlock())
-		flagStack.add(new CallBlock(spritePath + '/global'))
-
-		if (
-			context.reference.definitionPaths[spritePath + '/global/update'] !== undefined &&
-			context.reference.definitionPaths[spritePath + '/global/update'].signature() ===
-				new FUNCTION(new VOID(), []).signature()
-		) {
-			flagStack.add(new ForeverBlock()).stack.add(new CallBlock(spritePath + '/global/update'))
-		}
-
-		projectJSON.targets[spriteIndex].blocks = {
-			...projectJSON.targets[spriteIndex].blocks,
-			...flagStack.convert(),
-		}
-
-		spriteIndex++
-	}
-
-	fs.writeFileSync(path.join(outPath, 'project.json'), JSON.stringify(projectJSON, null, 2))
-
-	zip.addLocalFile(path.join(outPath, 'project.json'))
-
-	const zipDest = path.join(buildPath, 'project.sb3')
-
-	zip.writeZip(zipDest)
 }

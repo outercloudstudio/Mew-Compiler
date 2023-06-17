@@ -4,8 +4,6 @@
 
 Checks for valid context placement of tokens
 
-## Stage 2
-
 Finds dependencies like imports and sprites and costumes
 
 ## Stage 3

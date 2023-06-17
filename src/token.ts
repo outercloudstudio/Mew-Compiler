@@ -15,10 +15,14 @@ export type Token = {
 }
 
 export function matchToken(token: Token, type: string, content: string) {
+	if (token === undefined) return false
+
 	return token.type == type && token.content == content
 }
 
 export function matchType(token: Token, type: string) {
+	if (token === undefined) return false
+
 	return token.type == type
 }
 
