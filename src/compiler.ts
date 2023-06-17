@@ -751,8 +751,6 @@ export async function compile(projectPath: string) {
 
 		const scopesToCompile = [filePath].concat(dependencies[filePath].dependencies)
 
-		console.warn(filePath)
-
 		while (scopesToCompile.length > 0) {
 			const scopeFilePath = scopesToCompile.shift()!
 
@@ -786,9 +784,6 @@ export async function compile(projectPath: string) {
 					}
 				}
 			}
-
-			console.log(scopeFilePath)
-			console.log(context.reference.names)
 
 			projectJSON = compileScope(
 				context,
