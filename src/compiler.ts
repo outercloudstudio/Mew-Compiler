@@ -751,6 +751,8 @@ export async function compile(projectPath: string) {
 
 		const scopesToCompile = [filePath].concat(dependencies[filePath].dependencies)
 
+		console.warn(filePath)
+
 		while (scopesToCompile.length > 0) {
 			const scopeFilePath = scopesToCompile.shift()!
 
@@ -765,33 +767,27 @@ export async function compile(projectPath: string) {
 
 			addNativeNames(context, projectJSON, spriteIndex)
 
-			console.log(shallowDependencies)
-
 			for (const dependency of shallowDependencies[scopeFilePath].dependencies) {
-				console.log(dependency)
-
 				for (const name of Object.keys(fileComputeResults[dependency].exportNames)) {
-					console.log(name)
-					console.log(fileComputeResults[dependency].exportNames[name].type)
-					console.log(fileComputeResults[dependency].exportNames[name].type instanceof FUNCTION)
-
 					if (fileComputeResults[dependency].exportNames[name].type instanceof FUNCTION) {
 						context.reference.names[name] = {
 							type: fileComputeResults[dependency].exportNames[name].type,
-							path: context.path + '/' + name,
+							path: path.relative(projectPath, dependency) + '/global' + '/' + name,
 							paramPaths: fileComputeResults[dependency].exportNames[name].additionalData.params.map(
-								(param: string) => context.path + '/' + name + '/' + param
+								(param: string) =>
+									path.relative(projectPath, dependency) + '/global' + '/' + name + '/' + param
 							),
 						}
 					} else {
 						context.reference.names[name] = {
 							type: fileComputeResults[dependency].exportNames[name].type,
-							path: context.path + '/' + name,
+							path: path.relative(projectPath, dependency) + '/global' + '/' + name,
 						}
 					}
 				}
 			}
 
+			console.log(scopeFilePath)
 			console.log(context.reference.names)
 
 			projectJSON = compileScope(
