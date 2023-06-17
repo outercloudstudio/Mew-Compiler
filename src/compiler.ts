@@ -624,6 +624,15 @@ export async function compile(projectPath: string) {
 		}
 	}
 
+	const shallowDependencies: {
+		[key: string]: {
+			tree: any
+			dependencies: string[]
+			sprites: string[]
+			costumes: string[]
+		}
+	} = JSON.parse(JSON.stringify(dependencies))
+
 	for (const filePath of Object.keys(dependencies)) {
 		const dependenciesChecked = []
 		const dependenciesToCheck = JSON.parse(JSON.stringify(dependencies[filePath].dependencies))
@@ -684,15 +693,6 @@ export async function compile(projectPath: string) {
 	let filesToCompileStage2 = [projectFilePath].concat(dependencies[projectFilePath].sprites)
 
 	for (const filePath of filesToCompileStage2) {
-		const context: CompileContext = {
-			path: path.relative(projectPath, filePath) + '/global',
-			reference: {
-				names: {},
-				breakingScope: false,
-				definitionPaths: {},
-			},
-		}
-
 		const oldSpriteIndex = spriteIndex
 
 		if (filePath !== projectFilePath) {
@@ -749,27 +749,80 @@ export async function compile(projectPath: string) {
 			})
 		}
 
-		const flagStack = new Stack()
-		flagStack.add(new FlagBlock())
-		flagStack.add(new CallBlock(path.relative(projectPath, filePath) + '/global'))
+		const scopesToCompile = [filePath].concat(dependencies[filePath].dependencies)
 
-		// addNativeNames(context, projectJSON, spriteIndex)
+		while (scopesToCompile.length > 0) {
+			const scopeFilePath = scopesToCompile.shift()!
 
-		if (
-			context.reference.definitionPaths[path.relative(projectPath, filePath) + '/global/update'] !==
-				undefined &&
-			context.reference.definitionPaths[
-				path.relative(projectPath, filePath) + '/global/update'
-			].signature() === new FUNCTION(new VOID(), []).signature()
-		) {
-			flagStack
-				.add(new ForeverBlock())
-				.stack.add(new CallBlock(path.relative(projectPath, filePath) + '/global/update'))
-		}
+			const context: CompileContext = {
+				path: path.relative(projectPath, scopeFilePath) + '/global',
+				reference: {
+					names: {},
+					breakingScope: false,
+					definitionPaths: {},
+				},
+			}
 
-		projectJSON.targets[spriteIndex].blocks = {
-			...projectJSON.targets[spriteIndex].blocks,
-			...flagStack.convert(),
+			addNativeNames(context, projectJSON, spriteIndex)
+
+			console.log(shallowDependencies)
+
+			for (const dependency of shallowDependencies[scopeFilePath].dependencies) {
+				console.log(dependency)
+
+				for (const name of Object.keys(fileComputeResults[dependency].exportNames)) {
+					console.log(name)
+					console.log(fileComputeResults[dependency].exportNames[name].type)
+					console.log(fileComputeResults[dependency].exportNames[name].type instanceof FUNCTION)
+
+					if (fileComputeResults[dependency].exportNames[name].type instanceof FUNCTION) {
+						context.reference.names[name] = {
+							type: fileComputeResults[dependency].exportNames[name].type,
+							path: context.path + '/' + name,
+							paramPaths: fileComputeResults[dependency].exportNames[name].additionalData.params.map(
+								(param: string) => context.path + '/' + name + '/' + param
+							),
+						}
+					} else {
+						context.reference.names[name] = {
+							type: fileComputeResults[dependency].exportNames[name].type,
+							path: context.path + '/' + name,
+						}
+					}
+				}
+			}
+
+			console.log(context.reference.names)
+
+			projectJSON = compileScope(
+				context,
+				fileComputeResults[scopeFilePath].tree,
+				projectJSON,
+				spriteIndex,
+				scopeFilePath === projectFilePath
+			)
+
+			const flagStack = new Stack()
+			flagStack.add(new FlagBlock())
+			flagStack.add(new CallBlock(path.relative(projectPath, scopeFilePath) + '/global'))
+
+			if (
+				context.reference.definitionPaths[
+					path.relative(projectPath, scopeFilePath) + '/global/update'
+				] !== undefined &&
+				context.reference.definitionPaths[
+					path.relative(projectPath, scopeFilePath) + '/global/update'
+				].signature() === new FUNCTION(new VOID(), []).signature()
+			) {
+				flagStack
+					.add(new ForeverBlock())
+					.stack.add(new CallBlock(path.relative(projectPath, scopeFilePath) + '/global/update'))
+			}
+
+			projectJSON.targets[spriteIndex].blocks = {
+				...projectJSON.targets[spriteIndex].blocks,
+				...flagStack.convert(),
+			}
 		}
 
 		spriteIndex = oldSpriteIndex

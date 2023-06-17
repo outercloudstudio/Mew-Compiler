@@ -12,7 +12,10 @@ type ComputeContext = {
 			[key: string]: CompilerType
 		}
 		exportNames: {
-			[key: string]: CompilerType
+			[key: string]: {
+				type: CompilerType
+				additionalData: any
+			}
 		}
 		computeReturn: boolean
 		definiteReturn: boolean
@@ -437,7 +440,12 @@ function computeRecursive(token: Token, context: ComputeContext): Token {
 			context.reference.names[token.content.name.content] = type
 
 			if (context.location === 'global')
-				context.reference.exportNames[token.content.name.content] = type
+				context.reference.exportNames[token.content.name.content] = {
+					type,
+					additionalData: {
+						params: token.content.value.content.params.map((param: any) => param.content.name.content),
+					},
+				}
 
 			token.computedType = type
 		} else {
@@ -464,16 +472,20 @@ function addNativeNames(context: ComputeContext) {
 
 function addImportNames(context: ComputeContext, dependencies: ComputeResult[]) {
 	for (const dependency of dependencies) {
-		context.reference.names = {
-			...context.reference.names,
-			...dependency.exportNames,
+		for (const name of Object.keys(dependency.exportNames)) {
+			context.reference.names[name] = dependency.exportNames[name].type
 		}
 	}
 }
 
 export type ComputeResult = {
 	tree: Token[]
-	exportNames: { [key: string]: CompilerType }
+	exportNames: {
+		[key: string]: {
+			type: CompilerType
+			additionalData: any
+		}
+	}
 }
 
 export function compute(
