@@ -17,14 +17,12 @@ export function dependencyCheck(tree: Token[], filePath: string): DependencyChec
 
 	for (let i = 0; i < tree.length; i++) {
 		if (matchType(tree[i], 'import')) {
-			const name = tree[i].content.content
-			const dependencyPath = path.join(directoryPath, name + '.mao')
-
-			dependencies.push(dependencyPath)
+			dependencies.push(path.join(directoryPath, tree[i].content.content + '.mao'))
 		}
 
 		if (matchType(tree[i], 'sprite')) {
-			sprites.push(path.join(directoryPath, tree[i].content.content))
+			sprites.push(path.join(directoryPath, tree[i].content.content + '.mao'))
+			dependencies.push(path.join(directoryPath, tree[i].content.content + '.mao'))
 		}
 
 		if (matchType(tree[i], 'costume')) {

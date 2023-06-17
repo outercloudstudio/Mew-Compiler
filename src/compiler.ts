@@ -541,9 +541,6 @@ export async function compile(projectPath: string) {
 	const outPath = path.join(buildPath, 'out')
 	fs.mkdirSync(outPath)
 
-	const computePath = path.join(buildPath, 'compute')
-	fs.mkdirSync(computePath)
-
 	let projectJSON: any = {
 		targets: [
 			{
@@ -585,15 +582,6 @@ export async function compile(projectPath: string) {
 			semver: '3.0.0',
 			vm: '1.2.52',
 			agent: 'Mao/0.1.0',
-		},
-	}
-
-	const projectContext: CompileContext = {
-		path: 'project/global',
-		reference: {
-			names: {},
-			breakingScope: false,
-			definitionPaths: {},
 		},
 	}
 
@@ -658,6 +646,7 @@ export async function compile(projectPath: string) {
 
 	const filesToBeComputed = Object.keys(dependencies)
 	const filesComputed: string[] = []
+	const fileComputeResults: { [key: string]: ComputeResult } = {}
 
 	while (filesToBeComputed.length > 0) {
 		const fileToCompute = filesToBeComputed.splice(
@@ -676,9 +665,7 @@ export async function compile(projectPath: string) {
 		const fileDependencies: ComputeResult[] = []
 
 		for (const dependency of dependencies[fileToCompute].dependencies) {
-			const dependencyComputePath = path.join(computePath, path.relative(projectPath, dependency))
-
-			fileDependencies.push(JSON.parse(fs.readFileSync(dependencyComputePath).toString()))
+			fileDependencies.push(fileComputeResults[dependency])
 		}
 
 		const computeResult = compute(
@@ -687,9 +674,106 @@ export async function compile(projectPath: string) {
 			fileDependencies
 		)
 
-		fs.writeFileSync(
-			path.join(computePath, path.relative(projectPath, fileToCompute)),
-			JSON.stringify(computeResult, null, 2)
-		)
+		fileComputeResults[fileToCompute] = computeResult
 	}
+
+	const zip = new AdmZip()
+
+	let spriteIndex = 0
+
+	let filesToCompileStage2 = [projectFilePath].concat(dependencies[projectFilePath].sprites)
+
+	for (const filePath of filesToCompileStage2) {
+		const context: CompileContext = {
+			path: path.relative(projectPath, filePath) + '/global',
+			reference: {
+				names: {},
+				breakingScope: false,
+				definitionPaths: {},
+			},
+		}
+
+		const oldSpriteIndex = spriteIndex
+
+		if (filePath !== projectFilePath) {
+			spriteIndex++
+
+			projectJSON.targets.push({
+				isStage: false,
+				name: path.relative(projectPath, filePath),
+				variables: {
+					'Transfer Buffer': ['Transfer Buffer', 'void'],
+					Returning: ['Returning', 'false'],
+				},
+				lists: {
+					'Operation Stack': ['Operation Stack', []],
+				},
+				broadcasts: {},
+				blocks: {},
+				comments: {},
+				currentCostume: 0,
+				costumes: [],
+				sounds: [],
+				volume: 100,
+				layerOrder: spriteIndex,
+				visible: true,
+				x: 0,
+				y: 0,
+				size: 100,
+				direction: 90,
+				draggable: false,
+				rotationStyle: 'all around',
+			})
+		} else {
+			spriteIndex = 0
+		}
+
+		for (const costume of dependencies[filePath].costumes) {
+			const hash = crypto.createHash('md5').update(fs.readFileSync(costume)).digest('hex')
+
+			const extension = path.parse(costume).ext.slice(1)
+
+			fs.copyFileSync(costume, path.join(outPath, hash + extension))
+
+			zip.addLocalFile(path.join(outPath, hash + extension))
+
+			const image = await loadImage(costume)
+
+			projectJSON.targets[spriteIndex].costumes.push({
+				name: path.basename(costume),
+				dataFormat: extension,
+				assetId: hash,
+				md5ext: hash + '.' + extension,
+				rotationCenterX: image.width / 2,
+				rotationCenterY: image.height / 2,
+			})
+		}
+
+		const flagStack = new Stack()
+		flagStack.add(new FlagBlock())
+		flagStack.add(new CallBlock(filePath + '/global'))
+
+		// addNativeNames(context, projectJSON, spriteIndex)
+
+		if (
+			context.reference.definitionPaths[filePath + '/global/update'] !== undefined &&
+			context.reference.definitionPaths[filePath + '/global/update'].signature() ===
+				new FUNCTION(new VOID(), []).signature()
+		) {
+			flagStack.add(new ForeverBlock()).stack.add(new CallBlock(filePath + '/global/update'))
+		}
+
+		projectJSON.targets[spriteIndex].blocks = {
+			...projectJSON.targets[spriteIndex].blocks,
+			...flagStack.convert(),
+		}
+
+		spriteIndex = oldSpriteIndex
+	}
+
+	fs.writeFileSync(path.join(outPath, 'project.json'), JSON.stringify(projectJSON, null, 2))
+	zip.addLocalFile(path.join(outPath, 'project.json'))
+
+	const zipDest = path.join(buildPath, 'project.sb3')
+	zip.writeZip(zipDest)
 }
