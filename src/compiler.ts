@@ -126,7 +126,7 @@ function compileFunctionDefinition(
 	for (const param of token.content.value.content.params) {
 		// console.log(path + '/ (function param definition)' + param.content.name.content)
 
-		json.targets[0].lists[path + '/' + param.content.name.content + ' Stack'] = [
+		json.targets[target].lists[path + '/' + param.content.name.content + ' Stack'] = [
 			path + '/' + param.content.name.content + ' Stack',
 			[],
 		]
