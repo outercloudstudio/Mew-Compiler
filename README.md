@@ -17,7 +17,7 @@ After all files have run stage 1 and 2, stage 3 is run from the bottom of the de
 
 # TODO
 
-- Add negative number support
+- ~Add negative number support~
 - Change assignments to use value
 - Contexts include a path not a location
 - compute checks for import exists
