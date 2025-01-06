@@ -1,0 +1,25 @@
+costume "cat.svg", 50, 50
+
+goTo(-100, 0)
+
+float velocity = 10
+
+forever {
+    if(touching("pipe.mew")) {
+        goTo(-100, 0)
+
+        if(getX() <= -100) {
+            goTo(100, 0)
+        }
+
+        velocity = 0
+    }
+
+    if(keyPressed("space")) {
+        velocity = 10
+    }
+
+    changeY(velocity)
+
+    velocity = velocity - 1
+}

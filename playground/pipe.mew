@@ -1,0 +1,9 @@
+costume "pipe.svg", 50, 240
+
+forever {
+    changeX(-10)
+
+    if(getX() < -200) {
+        goTo(240, 0)
+    }
+}

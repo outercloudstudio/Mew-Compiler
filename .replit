@@ -1,0 +1,11 @@
+entrypoint = "index.ts"
+modules = ["bun-0.7:v1-20230724-4274858"]
+
+hidden = [".config", "bun.lockb"]
+
+[nix]
+channel = "stable-22_11"
+
+[deployment]
+build = ["sh", "-c", "mkdir .build && bun build index.ts > .build/index.js"]
+run = ["sh", "-c", "bun .build/index.js"]
